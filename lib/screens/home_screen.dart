@@ -1,28 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_blog_app/providers/auth_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  final StatefulNavigationShell shell;
+  const HomeScreen({super.key, required this.shell});
 
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Home Screen')),
-      body: Center(
-        child: Column(
-          children: [
-            Text(
-              'Welcome to the Home Screen! ${context.read<AuthProvider>().currentSession?.user.email ?? 'No user'}',
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                await context.read<AuthProvider>().signOut();
-              },
-              child: const Text('Sign Out'),
-            ),
-          ],
-        ),
+      body: widget.shell,
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: widget.shell.currentIndex,
+        onTap: (int index) {
+          widget.shell.goBranch(index);
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Posts'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        ],
       ),
     );
   }
