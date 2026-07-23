@@ -14,8 +14,8 @@ class ProfileTab extends StatelessWidget {
           children: [
             Consumer<AuthProvider>(
               builder: (context, value, child) => ListTile(
-                leading: Icon(Icons.person),
-                title: Text("User"),
+                leading: const Icon(Icons.person),
+                title: Text(value.currentProfile?.name ?? "No user"),
                 subtitle: Text(value.currentSession?.user.email ?? 'No email'),
               ),
             ),
