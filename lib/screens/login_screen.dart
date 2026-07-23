@@ -13,6 +13,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isLoggingIn = false;
 
   void onLogin() async {
     final email = _emailController.text;
@@ -20,6 +21,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final authProvider = context.read<AuthProvider>();
     try {
+      setState(() {
+        _isLoggingIn = true;
+      });
       await authProvider.signIn(email, password);
     } catch (e) {
       if (mounted) {
@@ -27,6 +31,10 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
       }
+    } finally {
+      setState(() {
+        _isLoggingIn = false;
+      });
     }
   }
 
@@ -56,7 +64,16 @@ class _LoginScreenState extends State<LoginScreen> {
               decoration: const InputDecoration(labelText: 'Password'),
               obscureText: true,
             ),
-            ElevatedButton(onPressed: onLogin, child: const Text('Login')),
+            ElevatedButton(
+              onPressed: onLogin,
+              child: _isLoggingIn
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Login'),
+            ),
             SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,

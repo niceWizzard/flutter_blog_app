@@ -13,12 +13,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  void onLogin() async {
+  bool _isRegistering = false;
+
+  void onRegister() async {
     final email = _emailController.text;
     final password = _passwordController.text;
 
     final authProvider = context.read<AuthProvider>();
     try {
+      setState(() {
+        _isRegistering = true;
+      });
       await authProvider.signUp(email, password);
     } catch (e) {
       if (mounted) {
@@ -26,6 +31,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text('Registration failed: $e')));
       }
+    } finally {
+      setState(() {
+        _isRegistering = false;
+      });
     }
   }
 
@@ -55,7 +64,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
               decoration: const InputDecoration(labelText: 'Password'),
               obscureText: true,
             ),
-            ElevatedButton(onPressed: onLogin, child: const Text('Register')),
+            ElevatedButton(
+              onPressed: onRegister,
+              child: _isRegistering
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Register'),
+            ),
           ],
         ),
       ),
