@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blog_app/providers/auth_provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -20,12 +19,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final authProvider = context.read<AuthProvider>();
     try {
-      await authProvider.signIn(email, password);
+      await authProvider.signUp(email, password);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+        ).showSnackBar(SnackBar(content: Text('Registration failed: $e')));
       }
     }
   }
@@ -33,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login Screen')),
+      appBar: AppBar(title: const Text('Register Screen')),
       body: Container(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -46,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
               style: Theme.of(context).textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
-            Text("Please log in to continue.", textAlign: TextAlign.center),
+            Text("Create an account to continue.", textAlign: TextAlign.center),
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(labelText: 'Email'),
@@ -56,20 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
               decoration: const InputDecoration(labelText: 'Password'),
               obscureText: true,
             ),
-            ElevatedButton(onPressed: onLogin, child: const Text('Login')),
-            SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text("Don't have an account?"),
-                TextButton(
-                  onPressed: () {
-                    context.push('/register');
-                  },
-                  child: const Text('Register'),
-                ),
-              ],
-            ),
+            ElevatedButton(onPressed: onLogin, child: const Text('Register')),
           ],
         ),
       ),

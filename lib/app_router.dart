@@ -1,6 +1,7 @@
 import 'package:flutter_blog_app/providers/auth_provider.dart';
 import 'package:flutter_blog_app/screens/home_screen.dart';
 import 'package:flutter_blog_app/screens/login_screen.dart';
+import 'package:flutter_blog_app/screens/register_screen.dart';
 import 'package:go_router/go_router.dart';
 
 class AppRouter {
@@ -17,9 +18,15 @@ class AppRouter {
         redirect: (context, state) =>
             authProvider.isAuthenticated ? null : '/login',
       ),
+
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
+        redirect: (context, state) => authProvider.isAuthenticated ? '/' : null,
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterScreen(),
         redirect: (context, state) => authProvider.isAuthenticated ? '/' : null,
       ),
     ],
