@@ -16,18 +16,23 @@ class AppRouter {
         path: '/',
         builder: (context, state) => const HomeScreen(),
         redirect: (context, state) =>
-            authProvider.isAuthenticated ? null : '/login',
-      ),
-
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-        redirect: (context, state) => authProvider.isAuthenticated ? '/' : null,
+            authProvider.isAuthenticated ? null : '/auth/login',
       ),
       GoRoute(
-        path: '/register',
-        builder: (context, state) => const RegisterScreen(),
+        path: '/auth',
         redirect: (context, state) => authProvider.isAuthenticated ? '/' : null,
+        routes: [
+          GoRoute(
+            path: 'login',
+            name: "login",
+            builder: (context, state) => const LoginScreen(),
+          ),
+          GoRoute(
+            path: 'register',
+            name: "register",
+            builder: (context, state) => const RegisterScreen(),
+          ),
+        ],
       ),
     ],
   );

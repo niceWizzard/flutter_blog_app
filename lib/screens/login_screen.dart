@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Text("Don't have an account?"),
                   TextButton(
                     onPressed: () {
-                      context.push('/register');
+                      context.pushNamed('register');
                     },
                     child: const Text('Register'),
                   ),
