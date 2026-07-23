@@ -25,8 +25,28 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
-  Future<AuthResponse> signUp(String email, String password) async {
-    return await _supabaseClient.auth.signUp(email: email, password: password);
+  Future<AuthResponse> signUp(
+    String name,
+    String email,
+    String password,
+  ) async {
+    final res = await _supabaseClient.auth.signUp(
+      email: email,
+      password: password,
+    );
+    final user = res.user;
+    if (user == null) {
+      throw Exception(
+        'User registered successfully, but no user data returned.',
+      );
+    }
+
+    await _supabaseClient.from("profiles").insert({
+      'name': name,
+      'user_id': user.id,
+    });
+
+    return res;
   }
 
   Future<void> signOut() async {

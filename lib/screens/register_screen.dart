@@ -11,26 +11,26 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   bool _isRegistering = false;
+  String _email = "";
+  String _password = "";
+  String _name = "";
 
   void onRegister() async {
     if (_formKey.currentState?.validate() != true) {
       return;
     }
 
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
+    _formKey.currentState?.save();
 
     final authProvider = context.read<AuthProvider>();
     try {
       setState(() {
         _isRegistering = true;
       });
-      await authProvider.signUp(email, password);
+      await authProvider.signUp(_name, _email, _password);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -67,8 +67,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 textAlign: TextAlign.center,
               ),
               TextFormField(
-                controller: _emailController,
+                decoration: const InputDecoration(labelText: 'Name'),
+                onSaved: (newValue) => _name = newValue ?? '',
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter your name';
+                  }
+                  return null;
+                },
+              ),
+              TextFormField(
                 decoration: const InputDecoration(labelText: 'Email'),
+                onSaved: (newValue) => _email = newValue ?? '',
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Please enter your email';
@@ -80,8 +90,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 },
               ),
               TextFormField(
-                controller: _passwordController,
                 decoration: const InputDecoration(labelText: 'Password'),
+                onSaved: (newValue) => _password = newValue ?? '',
                 obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
