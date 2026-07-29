@@ -1,4 +1,5 @@
 import 'package:flutter_blog_app/providers/auth_provider.dart';
+import 'package:flutter_blog_app/screens/change_username_screen.dart';
 import 'package:flutter_blog_app/screens/home_screen.dart';
 import 'package:flutter_blog_app/screens/login_screen.dart';
 import 'package:flutter_blog_app/screens/posts_tab.dart';
@@ -39,6 +40,11 @@ class AppRouter {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/change_username',
+        name: 'change_username',
+        builder: (context, state) => const ChangeUsernameScreen(),
       ),
       GoRoute(
         path: '/auth',

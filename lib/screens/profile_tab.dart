@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blog_app/providers/auth_provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class ProfileTab extends StatelessWidget {
@@ -18,6 +19,11 @@ class ProfileTab extends StatelessWidget {
                 title: Text(value.currentProfile?.name ?? "No user"),
                 subtitle: Text(value.currentSession?.user.email ?? 'No email'),
               ),
+            ),
+            ListTile(
+              title: Text("Change Name"),
+              leading: const Icon(Icons.edit),
+              onTap: () => context.pushNamed('change_username'),
             ),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.redAccent),

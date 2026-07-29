@@ -82,6 +82,20 @@ class AuthProvider extends ChangeNotifier {
     return res;
   }
 
+  Future<void> updateProfileName(String newName) async {
+    final userId = _supabaseClient.auth.currentSession?.user.id;
+    if (userId == null) {
+      throw Exception('No authenticated user');
+    }
+
+    await _supabaseClient
+        .from('profiles')
+        .update({'name': newName.trim()})
+        .eq('user_id', userId);
+
+    await _refreshProfile();
+  }
+
   Future<void> signOut() async {
     await _supabaseClient.auth.signOut();
     _currentProfile = null;
