@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blog_app/providers/auth_provider.dart';
 import 'package:flutter_blog_app/utils/validation.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -31,6 +32,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _isRegistering = true;
       });
       await authProvider.signUp(_name, _email, _password);
+      if (mounted) {
+        context.goNamed('posts');
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

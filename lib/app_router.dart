@@ -18,8 +18,6 @@ class AppRouter {
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             HomeScreen(shell: navigationShell),
-        redirect: (context, state) =>
-            authProvider.isAuthenticated ? null : '/auth/login',
         branches: [
           StatefulShellBranch(
             routes: [
@@ -47,21 +45,18 @@ class AppRouter {
         builder: (context, state) => const ChangeUsernameScreen(),
       ),
       GoRoute(
-        path: '/auth',
+        path: '/login',
+        name: 'login',
         redirect: (context, state) =>
             authProvider.isAuthenticated ? '/posts' : null,
-        routes: [
-          GoRoute(
-            path: 'login',
-            name: 'login',
-            builder: (context, state) => const LoginScreen(),
-          ),
-          GoRoute(
-            path: 'register',
-            name: 'register',
-            builder: (context, state) => const RegisterScreen(),
-          ),
-        ],
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/register',
+        name: 'register',
+        redirect: (context, state) =>
+            authProvider.isAuthenticated ? '/posts' : null,
+        builder: (context, state) => const RegisterScreen(),
       ),
     ],
   );

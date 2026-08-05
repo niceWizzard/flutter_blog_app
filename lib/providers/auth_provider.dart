@@ -79,6 +79,7 @@ class AuthProvider extends ChangeNotifier {
       'user_id': user.id,
     });
 
+    await _refreshProfile();
     return res;
   }
 

@@ -29,6 +29,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoggingIn = true;
       });
       await authProvider.signIn(_email, _password);
+      if (mounted) {
+        context.go('/posts');
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
