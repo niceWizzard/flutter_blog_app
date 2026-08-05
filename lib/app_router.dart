@@ -2,6 +2,7 @@ import 'package:flutter_blog_app/providers/auth_provider.dart';
 import 'package:flutter_blog_app/screens/change_username_screen.dart';
 import 'package:flutter_blog_app/screens/home_screen.dart';
 import 'package:flutter_blog_app/screens/login_screen.dart';
+import 'package:flutter_blog_app/screens/post_detail_screen.dart';
 import 'package:flutter_blog_app/screens/posts_tab.dart';
 import 'package:flutter_blog_app/screens/profile_tab.dart';
 import 'package:flutter_blog_app/screens/register_screen.dart';
@@ -38,6 +39,14 @@ class AppRouter {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/posts/:postId',
+        name: 'post_detail',
+        builder: (context, state) {
+          final postId = state.pathParameters['postId']!;
+          return PostDetailScreen(postId: postId);
+        },
       ),
       GoRoute(
         path: '/change_username',

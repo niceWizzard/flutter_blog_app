@@ -4,6 +4,7 @@ import 'package:flutter_blog_app/data/post.dart';
 class PostProvider extends ChangeNotifier {
   final List<Post> posts = [
     Post(
+      id: "1",
       title: "Post 1",
       createdAt: DateTime(2026, 8, 5, 5),
       description: "This is the description of post 1",
@@ -11,6 +12,7 @@ class PostProvider extends ChangeNotifier {
       imageUrls: [],
     ),
     Post(
+      id: "2",
       title: "Post 2",
       createdAt: DateTime(2026, 8, 5, 5),
       description: "This is the description of post 2",
@@ -21,5 +23,9 @@ class PostProvider extends ChangeNotifier {
 
   Future<List<Post>> getPublicPosts() async {
     return Future.value([]);
+  }
+
+  Post? getPostById(String postId) {
+    return posts.where((post) => post.id == postId).firstOrNull;
   }
 }
