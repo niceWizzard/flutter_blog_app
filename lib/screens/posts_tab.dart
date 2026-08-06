@@ -53,6 +53,16 @@ class _PostsTabState extends State<PostsTab> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Posts')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final created = await context.pushNamed<bool>('create_post');
+          if (created == true) {
+            await fetchPosts();
+          }
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('New Post'),
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           await fetchPosts();

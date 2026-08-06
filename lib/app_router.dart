@@ -1,5 +1,6 @@
 import 'package:flutter_blog_app/providers/auth_provider.dart';
 import 'package:flutter_blog_app/screens/change_username_screen.dart';
+import 'package:flutter_blog_app/screens/create_post_screen.dart';
 import 'package:flutter_blog_app/screens/home_screen.dart';
 import 'package:flutter_blog_app/screens/login_screen.dart';
 import 'package:flutter_blog_app/screens/post_detail_screen.dart';
@@ -39,6 +40,11 @@ class AppRouter {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/posts/new',
+        name: 'create_post',
+        builder: (context, state) => const CreatePostScreen(),
       ),
       GoRoute(
         path: '/posts/:postId',

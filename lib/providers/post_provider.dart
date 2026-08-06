@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_blog_app/data/post.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PostProvider extends ChangeNotifier {
@@ -42,5 +45,47 @@ class PostProvider extends ChangeNotifier {
       print('Error fetching post by ID: $e');
       return null;
     }
+  }
+
+  Future<void> createPost({
+    required String title,
+    required String description,
+    required List<XFile> images,
+  }) async {
+    final userId = Supabase.instance.client.auth.currentSession?.user.id;
+    if (userId == null) {
+      throw Exception('You must be signed in to create a post.');
+    }
+
+    final uploadedImageUrls = <String>[];
+
+    for (final image in images) {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+      final storagePath = '$userId/$fileName';
+      final file = File(image.path);
+      final response = await Supabase.instance.client.storage
+          .from('post-images')
+          .upload(storagePath, file);
+
+      final publicUrl = Supabase.instance.client.storage
+          .from('post-images')
+          .getPublicUrl(storagePath);
+
+      uploadedImageUrls.add(publicUrl);
+      if (response.isEmpty) {
+        throw Exception('Unable to upload one or more images.');
+      }
+    }
+
+    await Supabase.instance.client.from('posts').insert({
+      'user_id': userId,
+      'title': title,
+      'description': description,
+      'image_urls': uploadedImageUrls,
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+
+    notifyListeners();
   }
 }
