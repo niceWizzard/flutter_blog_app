@@ -250,11 +250,8 @@ class _PostsTabState extends State<PostsTab> {
                               const SizedBox(width: 8),
                               Builder(
                                 builder: (context) {
-                                  final postProvider =
-                                      Provider.of<PostProvider>(
-                                        context,
-                                        listen: false,
-                                      );
+                                  final postProvider = context
+                                      .read<PostProvider>();
                                   final canManage = postProvider.canManagePost(
                                     post: post,
                                     currentUserId: postProvider.currentUserId,
@@ -310,10 +307,9 @@ class _PostsTabState extends State<PostsTab> {
 
                                         if (confirmed == true) {
                                           try {
-                                            await Provider.of<PostProvider>(
-                                              context,
-                                              listen: false,
-                                            ).deletePost(postId: post.id);
+                                            postProvider.deletePost(
+                                              postId: post.id,
+                                            );
                                             if (!mounted) return;
                                             ScaffoldMessenger.of(
                                               context,
@@ -326,16 +322,17 @@ class _PostsTabState extends State<PostsTab> {
                                             );
                                             await fetchPosts(page: 1);
                                           } catch (e) {
-                                            if (!mounted) return;
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Unable to delete post: $e',
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    'Unable to delete post: $e',
+                                                  ),
                                                 ),
-                                              ),
-                                            );
+                                              );
+                                            }
                                           }
                                         }
                                       }

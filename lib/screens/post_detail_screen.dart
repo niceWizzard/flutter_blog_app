@@ -55,10 +55,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         actions: [
           Builder(
             builder: (context) {
-              final postProvider = Provider.of<PostProvider>(
-                context,
-                listen: false,
-              );
+              final postProvider = context.read<PostProvider>();
               final canManage =
                   post != null &&
                   postProvider.canManagePost(
@@ -101,21 +98,23 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
                     if (confirmed == true) {
                       try {
-                        await Provider.of<PostProvider>(
-                          context,
-                          listen: false,
-                        ).deletePost(postId: post!.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Post deleted successfully'),
-                          ),
-                        );
-                        context.pop();
+                        await postProvider.deletePost(postId: post!.id);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Post deleted successfully'),
+                            ),
+                          );
+                          context.pop();
+                        }
                       } catch (e) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Unable to delete post: $e')),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Unable to delete post: $e'),
+                            ),
+                          );
+                        }
                       }
                     }
                   }
