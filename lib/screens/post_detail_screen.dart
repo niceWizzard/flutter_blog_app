@@ -40,9 +40,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error fetching post: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error fetching post: $e')));
+      }
     }
   }
 
@@ -103,7 +105,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           context,
                           listen: false,
                         ).deletePost(postId: post!.id);
-                        if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Post deleted successfully'),
@@ -160,7 +161,7 @@ class ContentWithPost extends StatelessWidget {
                   width: double.infinity,
                   height: 220,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, _, __) => Container(
+                  errorBuilder: (context, _, _) => Container(
                     height: 220,
                     color: Colors.grey.shade200,
                     child: const Center(
@@ -233,7 +234,7 @@ class ContentWithPost extends StatelessWidget {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: post.imageUrls.length - 1,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  separatorBuilder: (_, _) => const SizedBox(width: 12),
                   itemBuilder: (context, index) {
                     final imageUrl = post.imageUrls[index + 1];
                     return ClipRRect(
@@ -243,7 +244,7 @@ class ContentWithPost extends StatelessWidget {
                         width: 140,
                         height: 100,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, _, __) => Container(
+                        errorBuilder: (context, _, _) => Container(
                           width: 140,
                           height: 100,
                           color: Colors.grey.shade200,

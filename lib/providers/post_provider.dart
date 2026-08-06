@@ -66,7 +66,6 @@ class PostProvider extends ChangeNotifier {
         imageUrls: List<String>.from(response['image_urls']),
       );
     } catch (e) {
-      print('Error fetching post by ID: $e');
       return null;
     }
   }

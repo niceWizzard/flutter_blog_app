@@ -256,7 +256,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
                                       width: 96,
                                       height: 96,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (context, _, __) =>
+                                      errorBuilder: (context, _, _) =>
                                           Container(
                                             width: 96,
                                             height: 96,
@@ -305,7 +305,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
                                       width: 96,
                                       height: 96,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (context, _, __) =>
+                                      errorBuilder: (context, _, _) =>
                                           Container(
                                             width: 96,
                                             height: 96,

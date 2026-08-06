@@ -147,7 +147,7 @@ class _PostsTabState extends State<PostsTab> {
                                         width: 72,
                                         height: 72,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (context, _, __) =>
+                                        errorBuilder: (context, _, _) =>
                                             Container(
                                               width: 72,
                                               height: 72,
@@ -349,7 +349,7 @@ class _PostsTabState extends State<PostsTab> {
                       ),
                     ),
                   );
-                }).toList(),
+                }),
                 if (posts.isNotEmpty || _currentPage > 1 || _hasMore)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
