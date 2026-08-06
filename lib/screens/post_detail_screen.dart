@@ -13,20 +13,45 @@ class PostDetailScreen extends StatefulWidget {
 
 class _PostDetailScreenState extends State<PostDetailScreen> {
   Post? post;
-
+  bool _isLoading = true;
   @override
   void initState() {
     super.initState();
-    final postProvider = context.read<PostProvider>();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await fetchPost();
+    });
+  }
 
-    post = postProvider.getPostById(widget.postId);
+  Future<void> fetchPost() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      final postProvider = Provider.of<PostProvider>(context, listen: false);
+      final fetchedPost = await postProvider.getPostById(
+        int.parse(widget.postId),
+      );
+      setState(() {
+        post = fetchedPost;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error fetching post: $e')));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(),
-      body: post != null
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : post != null
           ? ContentWithPost(post: post!)
           : Center(child: Text('Post with id ${widget.postId} not found')),
     );

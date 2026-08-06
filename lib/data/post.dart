@@ -4,17 +4,22 @@ class Post {
   final String description;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final String id;
+  final int id;
+  final String? userId;
+
   Post({
-    required this.createdAt,
-    required this.description,
+    required this.id,
+    required this.userId,
     required this.title,
     required this.updatedAt,
+    required this.createdAt,
+    required this.description,
     required this.imageUrls,
-    required this.id,
   });
 
   Post copyWith({
+    int? id,
+    String? userId,
     List<String>? imageUrls,
     String? title,
     String? description,
@@ -22,7 +27,8 @@ class Post {
     DateTime? updatedAt,
   }) {
     return Post(
-      id: id,
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
       imageUrls: imageUrls ?? this.imageUrls,
       title: title ?? this.title,
       description: description ?? this.description,
