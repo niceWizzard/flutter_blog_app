@@ -1,6 +1,7 @@
 import 'package:flutter_blog_app/providers/auth_provider.dart';
 import 'package:flutter_blog_app/screens/change_username_screen.dart';
 import 'package:flutter_blog_app/screens/create_post_screen.dart';
+import 'package:flutter_blog_app/screens/edit_post_screen.dart';
 import 'package:flutter_blog_app/screens/home_screen.dart';
 import 'package:flutter_blog_app/screens/login_screen.dart';
 import 'package:flutter_blog_app/screens/post_detail_screen.dart';
@@ -52,6 +53,14 @@ class AppRouter {
         builder: (context, state) {
           final postId = state.pathParameters['postId']!;
           return PostDetailScreen(postId: postId);
+        },
+      ),
+      GoRoute(
+        path: '/posts/:postId/edit',
+        name: 'edit_post',
+        builder: (context, state) {
+          final postId = state.pathParameters['postId']!;
+          return EditPostScreen(postId: postId);
         },
       ),
       GoRoute(

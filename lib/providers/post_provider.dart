@@ -6,6 +6,17 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PostProvider extends ChangeNotifier {
+  String? get currentUserId =>
+      Supabase.instance.client.auth.currentSession?.user.id;
+
+  bool canManagePost({required Post post, required String? currentUserId}) {
+    if (currentUserId == null) {
+      return false;
+    }
+
+    return post.userId == currentUserId;
+  }
+
   Future<List<Post>> getPublicPosts() async {
     final response = await Supabase.instance.client.from('posts').select();
     print(response);
@@ -86,6 +97,95 @@ class PostProvider extends ChangeNotifier {
       'updated_at': DateTime.now().toIso8601String(),
     });
 
+    notifyListeners();
+  }
+
+  Future<void> updatePost({
+    required int postId,
+    required String title,
+    required String description,
+    required List<String> existingImageUrls,
+    required List<XFile> newImages,
+    required List<String> removedImageUrls,
+  }) async {
+    final userId = currentUserId;
+    if (userId == null) {
+      throw Exception('You must be signed in to update a post.');
+    }
+
+    final existingPost = await Supabase.instance.client
+        .from('posts')
+        .select('user_id')
+        .eq('id', postId)
+        .maybeSingle();
+
+    if (existingPost == null || existingPost['user_id'].toString() != userId) {
+      throw Exception('You can only edit your own posts.');
+    }
+
+    final finalImageUrls = <String>[];
+    final imagesToKeep = <String>[];
+
+    for (final imageUrl in existingImageUrls) {
+      if (!removedImageUrls.contains(imageUrl)) {
+        imagesToKeep.add(imageUrl);
+      }
+    }
+
+    finalImageUrls.addAll(imagesToKeep);
+
+    for (final image in newImages) {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+      final storagePath = '$userId/$fileName';
+      final file = File(image.path);
+      final response = await Supabase.instance.client.storage
+          .from('post-images')
+          .upload(storagePath, file);
+
+      final publicUrl = Supabase.instance.client.storage
+          .from('post-images')
+          .getPublicUrl(storagePath);
+
+      if (response.isEmpty) {
+        throw Exception('Unable to upload one or more images.');
+      }
+      finalImageUrls.add(publicUrl);
+    }
+
+    if (finalImageUrls.length > 5) {
+      throw Exception('You can keep up to 5 images.');
+    }
+
+    await Supabase.instance.client
+        .from('posts')
+        .update({
+          'title': title,
+          'description': description,
+          'image_urls': finalImageUrls,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', postId);
+
+    notifyListeners();
+  }
+
+  Future<void> deletePost({required int postId}) async {
+    final userId = currentUserId;
+    if (userId == null) {
+      throw Exception('You must be signed in to delete a post.');
+    }
+
+    final existingPost = await Supabase.instance.client
+        .from('posts')
+        .select('user_id')
+        .eq('id', postId)
+        .maybeSingle();
+
+    if (existingPost == null || existingPost['user_id'].toString() != userId) {
+      throw Exception('You can only delete your own posts.');
+    }
+
+    await Supabase.instance.client.from('posts').delete().eq('id', postId);
     notifyListeners();
   }
 }

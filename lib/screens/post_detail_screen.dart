@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blog_app/data/post.dart';
 import 'package:flutter_blog_app/providers/post_provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class PostDetailScreen extends StatefulWidget {
@@ -48,7 +49,82 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(
+        actions: [
+          Builder(
+            builder: (context) {
+              final postProvider = Provider.of<PostProvider>(
+                context,
+                listen: false,
+              );
+              final canManage =
+                  post != null &&
+                  postProvider.canManagePost(
+                    post: post!,
+                    currentUserId: postProvider.currentUserId,
+                  );
+
+              return PopupMenuButton<int>(
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: 1, child: Text('Edit')),
+                  const PopupMenuItem(value: 2, child: Text('Delete')),
+                ],
+                onSelected: (value) async {
+                  if (value == 1 && post != null) {
+                    final edited = await context.pushNamed<bool>(
+                      'edit_post',
+                      pathParameters: {'postId': post!.id.toString()},
+                    );
+                    if (edited == true) {
+                      await fetchPost();
+                    }
+                  } else if (value == 2 && post != null) {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Delete post?'),
+                        content: const Text('This action cannot be undone.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.of(ctx).pop(true),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmed == true) {
+                      try {
+                        await Provider.of<PostProvider>(
+                          context,
+                          listen: false,
+                        ).deletePost(postId: post!.id);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Post deleted successfully'),
+                          ),
+                        );
+                        context.pop();
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Unable to delete post: $e')),
+                        );
+                      }
+                    }
+                  }
+                },
+                enabled: canManage,
+              );
+            },
+          ),
+        ],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : post != null

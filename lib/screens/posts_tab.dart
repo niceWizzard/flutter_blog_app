@@ -204,18 +204,98 @@ class _PostsTabState extends State<PostsTab> {
                             ),
                             const SizedBox(width: 8),
                             // Overflow menu
-                            PopupMenuButton<int>(
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(
-                                  value: 1,
-                                  child: Text('Edit'),
-                                ),
-                                const PopupMenuItem(
-                                  value: 2,
-                                  child: Text('Delete'),
-                                ),
-                              ],
-                              onSelected: (_) {},
+                            Builder(
+                              builder: (context) {
+                                final postProvider = Provider.of<PostProvider>(
+                                  context,
+                                  listen: false,
+                                );
+                                final canManage = postProvider.canManagePost(
+                                  post: post,
+                                  currentUserId: postProvider.currentUserId,
+                                );
+
+                                return PopupMenuButton<int>(
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(
+                                      value: 1,
+                                      child: Text('Edit'),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 2,
+                                      child: Text('Delete'),
+                                    ),
+                                  ],
+                                  enabled: canManage,
+                                  onSelected: (value) async {
+                                    if (value == 1) {
+                                      final edited = await context
+                                          .pushNamed<bool>(
+                                            'edit_post',
+                                            pathParameters: {
+                                              'postId': post.id.toString(),
+                                            },
+                                          );
+                                      if (edited == true) {
+                                        await fetchPosts();
+                                      }
+                                    } else if (value == 2) {
+                                      final confirmed = await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Delete post?'),
+                                          content: const Text(
+                                            'This action cannot be undone.',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(ctx).pop(false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            FilledButton(
+                                              onPressed: () =>
+                                                  Navigator.of(ctx).pop(true),
+                                              child: const Text('Delete'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+
+                                      if (confirmed == true) {
+                                        try {
+                                          await Provider.of<PostProvider>(
+                                            context,
+                                            listen: false,
+                                          ).deletePost(postId: post.id);
+                                          if (!mounted) return;
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Post deleted successfully',
+                                              ),
+                                            ),
+                                          );
+                                          await fetchPosts();
+                                        } catch (e) {
+                                          if (!mounted) return;
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Unable to delete post: $e',
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    }
+                                  },
+                                );
+                              },
                             ),
                           ],
                         ),
