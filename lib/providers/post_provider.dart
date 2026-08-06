@@ -17,9 +17,14 @@ class PostProvider extends ChangeNotifier {
     return post.userId == currentUserId;
   }
 
-  Future<List<Post>> getPublicPosts() async {
-    final response = await Supabase.instance.client.from('posts').select();
-    print(response);
+  Future<List<Post>> getPublicPosts({int limit = 10, int offset = 0}) async {
+    final response = await Supabase.instance.client
+        .from('posts')
+        .select()
+        .order('created_at', ascending: false)
+        .limit(limit)
+        .range(offset, offset + limit - 1);
+
     return response
         .map(
           (data) => Post(
