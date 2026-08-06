@@ -27,7 +27,7 @@ class _PostsTabState extends State<PostsTab> {
 
   int get _totalPages {
     if (_totalPosts <= 0) return 1;
-    return ((_totalPosts - 1) / _pageSize).ceil();
+    return (_totalPosts / _pageSize).ceil();
   }
 
   List<int> get _visiblePageNumbers {
@@ -65,17 +65,14 @@ class _PostsTabState extends State<PostsTab> {
         limit: _pageSize,
         offset: (page - 1) * _pageSize,
       );
-      final totalPosts = await postProvider.getPublicPosts(
-        limit: 1000,
-        offset: 0,
-      );
+      final totalPostsCount = await postProvider.getPublicPostsCount();
 
       if (!mounted) return;
 
       setState(() {
         posts = fetchedPosts;
         _currentPage = page;
-        _totalPosts = totalPosts.length;
+        _totalPosts = totalPostsCount;
         _hasMore =
             fetchedPosts.length == _pageSize && _currentPage < _totalPages;
         _isLoading = false;

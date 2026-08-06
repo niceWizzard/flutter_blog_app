@@ -40,6 +40,14 @@ class PostProvider extends ChangeNotifier {
         .toList();
   }
 
+  Future<int> getPublicPostsCount() async {
+    final response = await Supabase.instance.client
+        .from('posts')
+        .select('id')
+        .count();
+    return response.count;
+  }
+
   Future<Post?> getPostById(int postId) async {
     try {
       final response = await Supabase.instance.client
