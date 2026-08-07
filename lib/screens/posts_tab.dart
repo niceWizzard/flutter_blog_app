@@ -204,26 +204,73 @@ class _PostsTabState extends State<PostsTab> {
                                           ?.copyWith(color: Colors.grey[800]),
                                     ),
                                     const SizedBox(height: 8),
-                                    Row(
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 6,
                                       children: [
-                                        Icon(
-                                          Icons.calendar_today,
-                                          size: 14,
-                                          color: Colors.grey[600],
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.calendar_today,
+                                              size: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              _formatDate(post.createdAt),
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color: Colors.grey[600],
+                                                  ),
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          _formatDate(post.createdAt),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                color: Colors.grey[600],
-                                              ),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.comment_outlined,
+                                              size: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              '${post.commentsCount} comments',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color: Colors.grey[600],
+                                                  ),
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(width: 12),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.remove_red_eye_outlined,
+                                              size: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              '${post.viewsCount} views',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color: Colors.grey[600],
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
                                         if (post.imageUrls.isNotEmpty)
                                           Row(
+                                            mainAxisSize: MainAxisSize.min,
                                             children: [
                                               Icon(
                                                 Icons.photo,

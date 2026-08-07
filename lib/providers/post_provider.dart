@@ -9,6 +9,16 @@ class PostProvider extends ChangeNotifier {
   String? get currentUserId =>
       Supabase.instance.client.auth.currentSession?.user.id;
 
+  int _parseCount(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+    return 0;
+  }
+
   bool canManagePost({required Post post, required String? currentUserId}) {
     if (currentUserId == null) {
       return false;
@@ -17,27 +27,59 @@ class PostProvider extends ChangeNotifier {
     return post.userId == currentUserId;
   }
 
+  Future<List<PostComment>> getCommentsForPost(int postId) async {
+    final response = await Supabase.instance.client
+        .from('comments')
+        .select(
+          'id, post_id, user_id, content, image_url, created_at, profiles(name)',
+        )
+        .eq('post_id', postId)
+        .order('created_at', ascending: true);
+
+    return response.map((data) {
+      final profileData = data['profiles'];
+      final profileName = profileData is Map
+          ? profileData['name']?.toString() ?? ''
+          : '';
+      final userId = data['user_id']?.toString() ?? '';
+
+      return PostComment(
+        id: data['id'],
+        postId: data['post_id'],
+        userId: userId,
+        content: data['content']?.toString() ?? '',
+        imageUrl: data['image_url']?.toString(),
+        createdAt: DateTime.parse(data['created_at']),
+        commenterName: profileName.isNotEmpty ? profileName : userId,
+      );
+    }).toList();
+  }
+
   Future<List<Post>> getPublicPosts({int limit = 10, int offset = 0}) async {
     final response = await Supabase.instance.client
         .from('posts')
-        .select()
+        .select('*, comments(count)')
         .order('created_at', ascending: false)
         .limit(limit)
         .range(offset, offset + limit - 1);
 
-    return response
-        .map(
-          (data) => Post(
-            id: data['id'],
-            userId: data['user_id'].toString(),
-            title: data['title'],
-            description: data['description'],
-            createdAt: DateTime.parse(data['created_at']),
-            updatedAt: DateTime.parse(data['updated_at']),
-            imageUrls: List<String>.from(data['image_urls']),
-          ),
-        )
-        .toList();
+    return response.map((data) {
+      final postId = data['id'] as int;
+      final commentsCount = data['comments'][0]['count'] as int? ?? 0;
+      final viewsCount = _parseCount(data['views_count']);
+
+      return Post(
+        id: postId,
+        userId: data['user_id'].toString(),
+        title: data['title'],
+        description: data['description'],
+        createdAt: DateTime.parse(data['created_at']),
+        updatedAt: DateTime.parse(data['updated_at']),
+        imageUrls: List<String>.from(data['image_urls'] ?? const []),
+        commentsCount: commentsCount,
+        viewsCount: viewsCount,
+      );
+    }).toList();
   }
 
   Future<int> getPublicPostsCount() async {
@@ -52,7 +94,7 @@ class PostProvider extends ChangeNotifier {
     try {
       final response = await Supabase.instance.client
           .from('posts')
-          .select()
+          .select('*, comments(count)')
           .eq('id', postId)
           .single();
 
@@ -63,7 +105,9 @@ class PostProvider extends ChangeNotifier {
         description: response['description'],
         createdAt: DateTime.parse(response['created_at']),
         updatedAt: DateTime.parse(response['updated_at']),
-        imageUrls: List<String>.from(response['image_urls']),
+        imageUrls: List<String>.from(response['image_urls'] ?? const []),
+        commentsCount: response['comments'][0]['count'] as int? ?? 0,
+        viewsCount: _parseCount(response['views_count']),
       );
     } catch (e) {
       return null;
@@ -199,5 +243,182 @@ class PostProvider extends ChangeNotifier {
 
     await Supabase.instance.client.from('posts').delete().eq('id', postId);
     notifyListeners();
+  }
+
+  Future<void> addComment({
+    required int postId,
+    required String content,
+    XFile? image,
+  }) async {
+    final userId = currentUserId;
+    if (userId == null) {
+      throw Exception('You must be signed in to comment.');
+    }
+
+    final trimmedContent = content.trim();
+    if (trimmedContent.isEmpty && image == null) {
+      throw Exception('Please add a comment or an image.');
+    }
+
+    String? imageUrl;
+    if (image != null) {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+      final storagePath = '$userId/$fileName';
+      final file = File(image.path);
+      final response = await Supabase.instance.client.storage
+          .from('post-images')
+          .upload(storagePath, file);
+
+      if (response.isEmpty) {
+        throw Exception('Unable to upload the comment image.');
+      }
+
+      imageUrl = Supabase.instance.client.storage
+          .from('post-images')
+          .getPublicUrl(storagePath);
+    }
+
+    await Supabase.instance.client.from('comments').insert({
+      'post_id': postId,
+      'user_id': userId,
+      'content': trimmedContent,
+      'image_url': imageUrl,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+
+    try {
+      final currentRow = await Supabase.instance.client
+          .from('posts')
+          .select('comments_count')
+          .eq('id', postId)
+          .maybeSingle();
+      final currentCount = _parseCount(currentRow?['comments_count']);
+
+      await Supabase.instance.client
+          .from('posts')
+          .update({
+            'comments_count': currentCount + 1,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', postId);
+    } catch (_) {}
+
+    notifyListeners();
+  }
+
+  Future<void> deleteComment({
+    required int commentId,
+    required int postId,
+  }) async {
+    final userId = currentUserId;
+    if (userId == null) {
+      throw Exception('You must be signed in to delete a comment.');
+    }
+
+    final existingComment = await Supabase.instance.client
+        .from('comments')
+        .select('user_id')
+        .eq('id', commentId)
+        .maybeSingle();
+
+    if (existingComment == null ||
+        existingComment['user_id'].toString() != userId) {
+      throw Exception('You can only delete your own comments.');
+    }
+
+    await Supabase.instance.client
+        .from('comments')
+        .delete()
+        .eq('id', commentId);
+
+    try {
+      final currentRow = await Supabase.instance.client
+          .from('posts')
+          .select('comments_count')
+          .eq('id', postId)
+          .maybeSingle();
+      final currentCount = _parseCount(currentRow?['comments_count']);
+
+      await Supabase.instance.client
+          .from('posts')
+          .update({
+            'comments_count': currentCount > 0 ? currentCount - 1 : 0,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', postId);
+    } catch (_) {}
+
+    notifyListeners();
+  }
+
+  Future<void> updateComment({
+    required int commentId,
+    required int postId,
+    required String content,
+    String? imageUrl,
+    bool removeImage = false,
+    XFile? newImage,
+  }) async {
+    final userId = currentUserId;
+    if (userId == null) {
+      throw Exception('You must be signed in to edit a comment.');
+    }
+
+    final existingComment = await Supabase.instance.client
+        .from('comments')
+        .select('user_id')
+        .eq('id', commentId)
+        .maybeSingle();
+
+    if (existingComment == null ||
+        existingComment['user_id'].toString() != userId) {
+      throw Exception('You can only edit your own comments.');
+    }
+
+    String? resolvedImageUrl = imageUrl;
+    if (removeImage) {
+      resolvedImageUrl = null;
+    }
+
+    if (newImage != null) {
+      final fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${newImage.name}';
+      final storagePath = '$userId/$fileName';
+      final file = File(newImage.path);
+      final response = await Supabase.instance.client.storage
+          .from('post-images')
+          .upload(storagePath, file);
+
+      if (response.isEmpty) {
+        throw Exception('Unable to upload the comment image.');
+      }
+
+      resolvedImageUrl = Supabase.instance.client.storage
+          .from('post-images')
+          .getPublicUrl(storagePath);
+    }
+
+    await Supabase.instance.client
+        .from('comments')
+        .update({'content': content.trim(), 'image_url': resolvedImageUrl})
+        .eq('id', commentId);
+
+    notifyListeners();
+  }
+
+  Future<void> incrementPostViews({required int postId}) async {
+    try {
+      final currentRow = await Supabase.instance.client
+          .from('posts')
+          .select('views_count')
+          .eq('id', postId)
+          .maybeSingle();
+      final currentCount = _parseCount(currentRow?['views_count']);
+
+      await Supabase.instance.client
+          .from('posts')
+          .update({'views_count': currentCount + 1})
+          .eq('id', postId);
+    } catch (_) {}
   }
 }
