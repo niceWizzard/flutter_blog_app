@@ -63,5 +63,15 @@ void main() {
       expect(updatedPost.viewsCount, 7);
       expect(updatedPost.id, post.id);
     });
+
+    test('builds view counts by post id from user_post_view rows', () {
+      final viewRows = [
+        {'post_id': 1},
+        {'post_id': 2},
+        {'post_id': 1},
+      ];
+
+      expect(PostProvider.buildViewCountsFromRows(viewRows), {1: 2, 2: 1});
+    });
   });
 }

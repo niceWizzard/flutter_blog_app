@@ -58,16 +58,15 @@ class PostProvider extends ChangeNotifier {
   Future<List<Post>> getPublicPosts({int limit = 10, int offset = 0}) async {
     final response = await Supabase.instance.client
         .from('posts')
-        .select('*, comments(count)')
+        .select('*, comments(count), user_post_view(count)')
         .order('created_at', ascending: false)
         .limit(limit)
         .range(offset, offset + limit - 1);
 
-    return response.map((data) {
+    final posts = response.map((data) {
       final postId = data['id'] as int;
       final commentsCount = data['comments'][0]['count'] as int? ?? 0;
-      final viewsCount = _parseCount(data['views_count']);
-
+      final viewsCount = data['user_post_view'][0]['count'] as int? ?? 0;
       return Post(
         id: postId,
         userId: data['user_id'].toString(),
@@ -80,6 +79,8 @@ class PostProvider extends ChangeNotifier {
         viewsCount: viewsCount,
       );
     }).toList();
+
+    return posts;
   }
 
   Future<int> getPublicPostsCount() async {
@@ -94,7 +95,7 @@ class PostProvider extends ChangeNotifier {
     try {
       final response = await Supabase.instance.client
           .from('posts')
-          .select('*, comments(count)')
+          .select('*, comments(count), user_post_view(count)')
           .eq('id', postId)
           .single();
 
@@ -107,7 +108,7 @@ class PostProvider extends ChangeNotifier {
         updatedAt: DateTime.parse(response['updated_at']),
         imageUrls: List<String>.from(response['image_urls'] ?? const []),
         commentsCount: response['comments'][0]['count'] as int? ?? 0,
-        viewsCount: _parseCount(response['views_count']),
+        viewsCount: response['user_post_view'][0]['count'] as int? ?? 0,
       );
     } catch (e) {
       return null;
@@ -407,18 +408,18 @@ class PostProvider extends ChangeNotifier {
   }
 
   Future<void> incrementPostViews({required int postId}) async {
-    try {
-      final currentRow = await Supabase.instance.client
-          .from('posts')
-          .select('views_count')
-          .eq('id', postId)
-          .maybeSingle();
-      final currentCount = _parseCount(currentRow?['views_count']);
+    final userId = currentUserId;
+    if (userId == null) {
+      return;
+    }
 
-      await Supabase.instance.client
-          .from('posts')
-          .update({'views_count': currentCount + 1})
-          .eq('id', postId);
+    try {
+      await Supabase.instance.client.from('user_post_view').upsert({
+        'post_id': postId,
+        'user_id': userId,
+      });
     } catch (_) {}
+
+    notifyListeners();
   }
 }

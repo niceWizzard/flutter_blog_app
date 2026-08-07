@@ -35,9 +35,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       });
       final postProvider = Provider.of<PostProvider>(context, listen: false);
       final postId = int.parse(widget.postId);
+      await postProvider.incrementPostViews(postId: postId);
       final fetchedPost = await postProvider.getPostById(postId);
       final fetchedComments = await postProvider.getCommentsForPost(postId);
-      await postProvider.incrementPostViews(postId: postId);
 
       if (!mounted) return;
 
