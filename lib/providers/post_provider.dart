@@ -55,15 +55,46 @@ class PostProvider extends ChangeNotifier {
     }).toList();
   }
 
-  Future<List<Post>> getPublicPosts({int limit = 10, int offset = 0}) async {
-    final response = await Supabase.instance.client
+  Future<List<Post>> getPublicPosts({
+    int limit = 10,
+    int offset = 0,
+    String sort = 'recent',
+    String? search,
+  }) async {
+    dynamic query = Supabase.instance.client
         .from('posts')
-        .select('*, comments(count), user_post_view(count)')
-        .order('created_at', ascending: false)
-        .limit(limit)
-        .range(offset, offset + limit - 1);
+        .select('*, comments(count), user_post_view(count)');
 
-    final posts = response.map((data) {
+    final trimmedSearch = search?.trim() ?? '';
+    if (trimmedSearch.isNotEmpty) {
+      final escapedSearch = trimmedSearch.replaceAll("'", "''");
+      query = query.or(
+        'title.ilike.%$escapedSearch%,description.ilike.%$escapedSearch%',
+      );
+    }
+
+    switch (sort) {
+      case 'oldest':
+        query = query.order('created_at', ascending: true);
+        break;
+      case 'comments':
+        query = query.order('comments_count', ascending: false);
+        break;
+      case 'views':
+        query = query.order('views_count', ascending: false);
+        break;
+      case 'title':
+        query = query.order('title', ascending: true);
+        break;
+      case 'recent':
+      default:
+        query = query.order('created_at', ascending: false);
+        break;
+    }
+
+    final response = await query.limit(limit).range(offset, offset + limit - 1);
+
+    final posts = response.map<Post>((data) {
       final postId = data['id'] as int;
       final commentsCount = data['comments'][0]['count'] as int? ?? 0;
       final viewsCount = data['user_post_view'][0]['count'] as int? ?? 0;
@@ -83,11 +114,18 @@ class PostProvider extends ChangeNotifier {
     return posts;
   }
 
-  Future<int> getPublicPostsCount() async {
-    final response = await Supabase.instance.client
-        .from('posts')
-        .select('id')
-        .count();
+  Future<int> getPublicPostsCount({String? search}) async {
+    var query = Supabase.instance.client.from('posts').select('id');
+
+    final trimmedSearch = search?.trim() ?? '';
+    if (trimmedSearch.isNotEmpty) {
+      final escapedSearch = trimmedSearch.replaceAll("'", "''");
+      query = query.or(
+        'title.ilike.%$escapedSearch%,description.ilike.%$escapedSearch%',
+      );
+    }
+
+    final response = await query.count();
     return response.count;
   }
 

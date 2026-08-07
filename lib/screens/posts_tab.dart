@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_blog_app/data/post.dart';
 import 'package:flutter_blog_app/providers/post_provider.dart';
@@ -19,6 +20,10 @@ class _PostsTabState extends State<PostsTab> {
   int _currentPage = 1;
   int _totalPosts = 0;
   List<Post> posts = [];
+  String _searchQuery = '';
+  String _selectedSort = 'recent';
+  String _selectedFilter = 'all';
+  Timer? _debounce;
 
   String _formatDate(DateTime d) {
     final local = d.toLocal();
@@ -67,6 +72,18 @@ class _PostsTabState extends State<PostsTab> {
     return (_totalPosts / _pageSize).ceil();
   }
 
+  List<Post> get _filteredPosts {
+    return posts.where((post) {
+      if (_selectedFilter == 'images') {
+        return post.imageUrls.isNotEmpty;
+      }
+      if (_selectedFilter == 'popular') {
+        return post.commentsCount + post.viewsCount > 0;
+      }
+      return true;
+    }).toList();
+  }
+
   List<int> get _visiblePageNumbers {
     final totalPages = _totalPages;
     if (totalPages <= 1) return [1];
@@ -101,8 +118,12 @@ class _PostsTabState extends State<PostsTab> {
       final fetchedPosts = await postProvider.getPublicPosts(
         limit: _pageSize,
         offset: (page - 1) * _pageSize,
+        sort: _selectedSort,
+        search: _searchQuery,
       );
-      final totalPostsCount = await postProvider.getPublicPostsCount();
+      final totalPostsCount = await postProvider.getPublicPostsCount(
+        search: _searchQuery,
+      );
 
       if (!mounted) return;
 
@@ -135,6 +156,12 @@ class _PostsTabState extends State<PostsTab> {
   }
 
   @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Posts')),
@@ -148,334 +175,481 @@ class _PostsTabState extends State<PostsTab> {
         icon: const Icon(Icons.add),
         label: const Text('New Post'),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-              children: [
-                ...posts.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final post = entry.value;
-                  final hasImage = post.imageUrls.isNotEmpty;
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: InkWell(
-                        onTap: () => context.pushNamed(
-                          'post_detail',
-                          pathParameters: {'postId': post.id.toString()},
+      body: Column(
+        children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                  child: Column(
+                    children: [
+                      TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Search posts',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: hasImage
-                                    ? Image.network(
-                                        post.imageUrls.first,
-                                        width: 72,
-                                        height: 72,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, _, _) =>
-                                            Container(
-                                              width: 72,
-                                              height: 72,
-                                              color: Colors.grey.shade200,
-                                              child: const Icon(
-                                                Icons.broken_image,
-                                                size: 32,
-                                              ),
-                                            ),
-                                      )
-                                    : Container(
-                                        width: 72,
-                                        height: 72,
-                                        color: Colors
-                                            .primaries[index %
-                                                Colors.primaries.length]
-                                            .shade200,
-                                        child: Center(
-                                          child: Text(
-                                            post.title.isNotEmpty
-                                                ? post.title[0].toUpperCase()
-                                                : '?',
-                                            style: const TextStyle(
-                                              fontSize: 28,
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      post.title,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      post.description,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(color: Colors.grey[800]),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 12,
-                                      runSpacing: 6,
-                                      children: [
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.calendar_today,
-                                              size: 14,
-                                              color: Colors.grey[600],
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              _formatDate(post.createdAt),
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                    color: Colors.grey[600],
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.comment_outlined,
-                                              size: 14,
-                                              color: Colors.grey[600],
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              '${post.commentsCount} comments',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                    color: Colors.grey[600],
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.remove_red_eye_outlined,
-                                              size: 14,
-                                              color: Colors.grey[600],
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              '${post.viewsCount} views',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                    color: Colors.grey[600],
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                        if (post.imageUrls.isNotEmpty)
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.photo,
-                                                size: 14,
-                                                color: Colors.grey[600],
-                                              ),
-                                              const SizedBox(width: 6),
-                                              Text(
-                                                '${post.imageUrls.length} image${post.imageUrls.length > 1 ? 's' : ''}',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodySmall
-                                                    ?.copyWith(
-                                                      color: Colors.grey[600],
-                                                    ),
-                                              ),
-                                            ],
-                                          ),
-                                      ],
-                                    ),
-                                  ],
+                        onChanged: (value) {
+                          setState(() {
+                            _searchQuery = value;
+                          });
+                          _debounce?.cancel();
+                          _debounce = Timer(const Duration(milliseconds: 500), () {
+                            fetchPosts(page: 1);
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedSort,
+                              decoration: InputDecoration(
+                                labelText: 'Sort by',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Builder(
-                                builder: (context) {
-                                  final postProvider = context
-                                      .read<PostProvider>();
-                                  final canManage = postProvider.canManagePost(
-                                    post: post,
-                                    currentUserId: postProvider.currentUserId,
-                                  );
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'recent',
+                                  child: Text('Newest'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'oldest',
+                                  child: Text('Oldest'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'title',
+                                  child: Text('Title A-Z'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedSort = value ?? 'recent';
+                                });
+                                fetchPosts(page: 1);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedFilter,
+                              decoration: InputDecoration(
+                                labelText: 'Filter',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'all',
+                                  child: Text('All posts'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'images',
+                                  child: Text('With images'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'popular',
+                                  child: Text('Popular'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedFilter = value ?? 'all';
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : ListView(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 12,
+                    ),
+                    children: [
+                      if (_filteredPosts.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: Center(
+                            child: Text(
+                              'No posts match your current search.',
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                          ),
+                        )
+                      else
+                        ..._filteredPosts.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final post = entry.value;
+                          final hasImage = post.imageUrls.isNotEmpty;
 
-                                  if (!canManage) {
-                                    return const SizedBox.shrink();
-                                  }
-
-                                  return PopupMenuButton<int>(
-                                    itemBuilder: (context) => [
-                                      const PopupMenuItem(
-                                        value: 1,
-                                        child: Text('Edit'),
-                                      ),
-                                      const PopupMenuItem(
-                                        value: 2,
-                                        child: Text('Delete'),
-                                      ),
-                                    ],
-                                    enabled: canManage,
-                                    onSelected: (value) async {
-                                      if (value == 1) {
-                                        final edited = await context
-                                            .pushNamed<bool>(
-                                              'edit_post',
-                                              pathParameters: {
-                                                'postId': post.id.toString(),
-                                              },
-                                            );
-                                        if (edited == true) {
-                                          await fetchPosts(page: 1);
-                                        }
-                                      } else if (value == 2) {
-                                        final confirmed = await showDialog<bool>(
-                                          context: context,
-                                          builder: (ctx) => AlertDialog(
-                                            title: const Text('Delete post?'),
-                                            content: const Text(
-                                              'This action cannot be undone.',
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.of(
-                                                  ctx,
-                                                ).pop(false),
-                                                child: const Text('Cancel'),
-                                              ),
-                                              FilledButton(
-                                                onPressed: () =>
-                                                    Navigator.of(ctx).pop(true),
-                                                child: const Text('Delete'),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-
-                                        if (confirmed == true) {
-                                          try {
-                                            postProvider.deletePost(
-                                              postId: post.id,
-                                            );
-                                            if (!mounted) return;
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Post deleted successfully',
-                                                ),
-                                              ),
-                                            );
-                                            await fetchPosts(page: 1);
-                                          } catch (e) {
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    'Unable to delete post: $e',
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Card(
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: InkWell(
+                                onTap: () => context.pushNamed(
+                                  'post_detail',
+                                  pathParameters: {
+                                    'postId': post.id.toString(),
+                                  },
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: hasImage
+                                            ? Image.network(
+                                                post.imageUrls.first,
+                                                width: 72,
+                                                height: 72,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, _, _) =>
+                                                    Container(
+                                                      width: 72,
+                                                      height: 72,
+                                                      color:
+                                                          Colors.grey.shade200,
+                                                      child: const Icon(
+                                                        Icons.broken_image,
+                                                        size: 32,
+                                                      ),
+                                                    ),
+                                              )
+                                            : Container(
+                                                width: 72,
+                                                height: 72,
+                                                color: Colors
+                                                    .primaries[index %
+                                                        Colors.primaries.length]
+                                                    .shade200,
+                                                child: Center(
+                                                  child: Text(
+                                                    post.title.isNotEmpty
+                                                        ? post.title[0]
+                                                              .toUpperCase()
+                                                        : '?',
+                                                    style: const TextStyle(
+                                                      fontSize: 28,
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
                                                   ),
                                                 ),
+                                              ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              post.title,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              post.description,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(
+                                                    color: Colors.grey[800],
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Wrap(
+                                              spacing: 12,
+                                              runSpacing: 6,
+                                              children: [
+                                                Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.calendar_today,
+                                                      size: 14,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      _formatDate(
+                                                        post.createdAt,
+                                                      ),
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            color: Colors
+                                                                .grey[600],
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.comment_outlined,
+                                                      size: 14,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      '${post.commentsCount} comments',
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            color: Colors
+                                                                .grey[600],
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons
+                                                          .remove_red_eye_outlined,
+                                                      size: 14,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      '${post.viewsCount} views',
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            color: Colors
+                                                                .grey[600],
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                if (post.imageUrls.isNotEmpty)
+                                                  Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.photo,
+                                                        size: 14,
+                                                        color: Colors.grey[600],
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Text(
+                                                        '${post.imageUrls.length} image${post.imageUrls.length > 1 ? 's' : ''}',
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .bodySmall
+                                                            ?.copyWith(
+                                                              color: Colors
+                                                                  .grey[600],
+                                                            ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Builder(
+                                        builder: (context) {
+                                          final postProvider = context
+                                              .read<PostProvider>();
+                                          final canManage = postProvider
+                                              .canManagePost(
+                                                post: post,
+                                                currentUserId:
+                                                    postProvider.currentUserId,
                                               );
-                                            }
+
+                                          if (!canManage) {
+                                            return const SizedBox.shrink();
                                           }
-                                        }
-                                      }
-                                    },
-                                  );
-                                },
+
+                                          return PopupMenuButton<int>(
+                                            itemBuilder: (context) => [
+                                              const PopupMenuItem(
+                                                value: 1,
+                                                child: Text('Edit'),
+                                              ),
+                                              const PopupMenuItem(
+                                                value: 2,
+                                                child: Text('Delete'),
+                                              ),
+                                            ],
+                                            enabled: canManage,
+                                            onSelected: (value) async {
+                                              if (value == 1) {
+                                                final edited = await context
+                                                    .pushNamed<bool>(
+                                                      'edit_post',
+                                                      pathParameters: {
+                                                        'postId': post.id
+                                                            .toString(),
+                                                      },
+                                                    );
+                                                if (edited == true) {
+                                                  await fetchPosts(page: 1);
+                                                }
+                                              } else if (value == 2) {
+                                                final confirmed =
+                                                    await showDialog<bool>(
+                                                      context: context,
+                                                      builder: (ctx) => AlertDialog(
+                                                        title: const Text(
+                                                          'Delete post?',
+                                                        ),
+                                                        content: const Text(
+                                                          'This action cannot be undone.',
+                                                        ),
+                                                        actions: [
+                                                          TextButton(
+                                                            onPressed: () =>
+                                                                Navigator.of(
+                                                                  ctx,
+                                                                ).pop(false),
+                                                            child: const Text(
+                                                              'Cancel',
+                                                            ),
+                                                          ),
+                                                          FilledButton(
+                                                            onPressed: () =>
+                                                                Navigator.of(
+                                                                  ctx,
+                                                                ).pop(true),
+                                                            child: const Text(
+                                                              'Delete',
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+
+                                                if (confirmed == true) {
+                                                  try {
+                                                    postProvider.deletePost(
+                                                      postId: post.id,
+                                                    );
+                                                    if (!mounted) return;
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text(
+                                                          'Post deleted successfully',
+                                                        ),
+                                                      ),
+                                                    );
+                                                    await fetchPosts(page: 1);
+                                                  } catch (e) {
+                                                    if (mounted) {
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        SnackBar(
+                                                          content: Text(
+                                                            'Unable to delete post: $e',
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            },
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
+                            ),
+                          );
+                        }),
+                      if (posts.isNotEmpty || _currentPage > 1 || _hasMore)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                          child: Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              if (_currentPage > 1)
+                                OutlinedButton(
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () =>
+                                            fetchPosts(page: _currentPage - 1),
+                                  child: const Text('Prev'),
+                                ),
+                              ..._visiblePageNumbers.map((page) {
+                                final isActive = page == _currentPage;
+                                return FilledButton(
+                                  onPressed: _isLoading || isActive
+                                      ? null
+                                      : () => fetchPosts(page: page),
+                                  style: isActive
+                                      ? FilledButton.styleFrom(
+                                          backgroundColor: Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
+                                        )
+                                      : null,
+                                  child: Text(page.toString()),
+                                );
+                              }),
+                              if (_hasMore)
+                                OutlinedButton(
+                                  onPressed: _isLoading
+                                      ? null
+                                      : () =>
+                                            fetchPosts(page: _currentPage + 1),
+                                  child: const Text('Next'),
+                                ),
                             ],
                           ),
                         ),
-                      ),
-                    ),
-                  );
-                }),
-                if (posts.isNotEmpty || _currentPage > 1 || _hasMore)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    child: Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        if (_currentPage > 1)
-                          OutlinedButton(
-                            onPressed: _isLoading
-                                ? null
-                                : () => fetchPosts(page: _currentPage - 1),
-                            child: const Text('Prev'),
-                          ),
-                        ..._visiblePageNumbers.map((page) {
-                          final isActive = page == _currentPage;
-                          return FilledButton(
-                            onPressed: _isLoading || isActive
-                                ? null
-                                : () => fetchPosts(page: page),
-                            style: isActive
-                                ? FilledButton.styleFrom(
-                                    backgroundColor: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                  )
-                                : null,
-                            child: Text(page.toString()),
-                          );
-                        }),
-                        if (_hasMore)
-                          OutlinedButton(
-                            onPressed: _isLoading
-                                ? null
-                                : () => fetchPosts(page: _currentPage + 1),
-                            child: const Text('Next'),
-                          ),
-                      ],
-                    ),
+                    ],
                   ),
+                ),
               ],
             ),
     );
