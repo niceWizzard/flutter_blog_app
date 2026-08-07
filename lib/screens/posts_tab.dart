@@ -22,7 +22,44 @@ class _PostsTabState extends State<PostsTab> {
 
   String _formatDate(DateTime d) {
     final local = d.toLocal();
-    return '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}';
+    final now = DateTime.now();
+    final difference = now.difference(local);
+
+    if (difference < const Duration(minutes: 1)) {
+      return 'just now';
+    }
+    if (difference < const Duration(hours: 1)) {
+      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
+    }
+    if (difference < const Duration(days: 1)) {
+      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
+    }
+    if (difference < const Duration(days: 2)) {
+      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
+    }
+
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+    final formattedHour = hour.toString().padLeft(2, '0');
+    final formattedMinute = local.minute.toString().padLeft(2, '0');
+    final period = local.hour < 12 ? 'AM' : 'PM';
+
+    return '${local.day} ${monthNames[local.month - 1]} ${local.year} '
+        '$formattedHour:$formattedMinute$period';
   }
 
   int get _totalPages {
