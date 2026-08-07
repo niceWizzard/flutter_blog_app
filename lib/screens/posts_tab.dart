@@ -304,6 +304,10 @@ class _PostsTabState extends State<PostsTab> {
                                     currentUserId: postProvider.currentUserId,
                                   );
 
+                                  if (!canManage) {
+                                    return const SizedBox.shrink();
+                                  }
+
                                   return PopupMenuButton<int>(
                                     itemBuilder: (context) => [
                                       const PopupMenuItem(

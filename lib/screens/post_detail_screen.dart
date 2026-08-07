@@ -72,6 +72,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     currentUserId: postProvider.currentUserId,
                   );
 
+              if (!canManage) {
+                return const SizedBox.shrink();
+              }
+
               return PopupMenuButton<int>(
                 itemBuilder: (context) => [
                   const PopupMenuItem(value: 1, child: Text('Edit')),
